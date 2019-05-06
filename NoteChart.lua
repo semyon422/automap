@@ -34,7 +34,7 @@ NoteChart.parse = function(self, filePath)
 			elseif self.currentBlockName == "HitObjects" and line ~= "" then
 				local note = {}
 				local data = line:split(",")
-				note.columnIndex = math.ceil(tonumber(data[1]) / 512 * self.columnCount)
+				note.columnIndex = math.min(math.max(math.ceil(tonumber(data[1]) / 512 * self.columnCount), 1), self.columnCount)
 				note.baseColumnIndex = note.columnIndex
 				
 				note.startTime = tonumber(data[3])
