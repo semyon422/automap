@@ -40,6 +40,10 @@ Drop beatmap here to convert.
 Current keymode: %d
 ]]
 
+Automap.versionString = [[
+Automap v5.0.2
+]]
+
 Automap.load = function(self)
 	self.cs = CS:new({
 		bx = 0,
@@ -69,6 +73,23 @@ Automap.load = function(self)
 	
 	self.info.text = self.infoString:format(self.targetMode)
 	self.info:reload()
+	
+	self.version = Button:new({
+		text = self.versionString,
+		x = 0,
+		y = 0,
+		w = 1,
+		h = 1,
+		cs = self.cs,
+		mode = "fill",
+		rectangleColor = {0, 0, 0, 0},
+		textColor = {255, 255, 255, 255},
+		textAlign = {x = "left", y = "left"},
+		limit = 1,
+		font = self.font
+	})
+	
+	self.version:reload()
 end
 
 Automap.unload = function(self)
@@ -78,12 +99,14 @@ Automap.update = function(self, dt)
 	love.timer.sleep(1/60)
 	
 	self.info:update()
+	self.version:update()
 	
 	self:updateColor(dt)
 end
 
 Automap.draw = function(self)
 	self.info:draw()
+	self.version:draw()
 end
 
 Automap.updateColor = function(self, dt)
