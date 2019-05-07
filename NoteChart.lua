@@ -33,14 +33,17 @@ NoteChart.parse = function(self, filePath)
 				self.bgName = line:match("^.-,.-,\"(.+)\"")
 			elseif self.currentBlockName == "HitObjects" and line ~= "" then
 				local note = {}
-				local data = line:split(",")
-				note.columnIndex = math.min(math.max(math.ceil(tonumber(data[1]) / 512 * self.columnCount), 1), self.columnCount)
+				note.data = line:split(",")
+				note.columnIndex = math.min(math.max(math.ceil(tonumber(note.data[1]) / 512 * self.columnCount), 1), self.columnCount)
 				note.baseColumnIndex = note.columnIndex
 				
-				note.startTime = tonumber(data[3])
+				note.startTime = tonumber(note.data[3])
 				note.endTime = note.startTime
-				if tonumber(data[4]) == 128 then
-					note.endTime = tonumber(data[6]:split(":")[1])
+				if tonumber(note.data[4]) == 128 then
+					note.addition = note.data[6]:split(":")
+					note.endTime = tonumber(note.addition[1])
+					table.remove(note.addition, 1)
+					note.addition = table.concat(note.addition, ":")
 				end
 				
 				if note.startTime ~= note.endTime then
@@ -82,11 +85,11 @@ NoteChart.export = function(self, filePath)
 		
 		if note.startTime ~= note.endTime then
 			table.insert(output, table.concat({
-				x, 192, math.floor(note.startTime), 128, 0, note.endTime, "0:0:0:0:"
+				x, 192, math.floor(note.startTime), note.data[4], note.data[5], note.endTime .. ":" .. note.addition
 			}, ","))
 		else
 			table.insert(output, table.concat({
-				x, 192, math.floor(note.startTime), 1, 0, "0:0:0:0:"
+				x, 192, math.floor(note.startTime), note.data[4], note.data[5], note.data[6]
 			}, ","))
 		end
 	end
