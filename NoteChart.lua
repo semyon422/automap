@@ -39,7 +39,7 @@ NoteChart.parse = function(self, filePath)
 				
 				note.startTime = tonumber(note.data[3])
 				note.endTime = note.startTime
-				if tonumber(note.data[4]) == 128 then
+				if bit.band(tonumber(note.data[4]), 128) == 128 then
 					note.addition = note.data[6]:split(":")
 					note.endTime = tonumber(note.addition[1])
 					table.remove(note.addition, 1)
@@ -80,16 +80,19 @@ NoteChart.export = function(self, filePath)
 	end
 	file:close()
 	
+	local addition = "0:0:0:0:"
 	for _, note in pairs(self.noteData) do
 		local x = math.floor((note.columnIndex - 0.5) * (512 / self.columnCount))
 		
 		if note.startTime ~= note.endTime then
+			local data = note.data or {0, 0, 0, 128, 0, addition}
 			table.insert(output, table.concat({
-				x, 192, math.floor(note.startTime), note.data[4], note.data[5], note.endTime .. ":" .. note.addition
+				x, 192, math.floor(note.startTime), data[4], data[5], note.endTime .. ":" .. addition
 			}, ","))
 		else
+			local data = note.data or {0, 0, 0, 1, 0, addition}
 			table.insert(output, table.concat({
-				x, 192, math.floor(note.startTime), note.data[4], note.data[5], note.data[6]
+				x, 192, math.floor(note.startTime), data[4], data[5], data[6]
 			}, ","))
 		end
 	end
