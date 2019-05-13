@@ -86,6 +86,7 @@ NoteChart.export = function(self, filePath)
 		
 		if note.startTime ~= note.endTime then
 			local data = note.data or {0, 0, 0, 128, 0, addition}
+			local addition = note.addition or addition
 			table.insert(output, table.concat({
 				x, 192, math.floor(note.startTime), data[4], data[5], note.endTime .. ":" .. addition
 			}, ","))
