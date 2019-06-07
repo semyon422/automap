@@ -13,6 +13,17 @@ local NotePreprocessor = require("libchart.NotePreprocessor")
 
 local config = require("config")
 
+local ffi = require('ffi')
+local liblove = ffi.load('love')
+
+ffi.cdef [[
+	int PHYSFS_setWriteDir(const char *newDir);
+]]
+
+local setWriteDir = function(path)
+	return liblove.PHYSFS_setWriteDir(path)
+end
+
 local Automap = {}
 
 Automap.font = love.graphics.newFont("NotoMono-Regular.ttf", 20)
@@ -41,7 +52,7 @@ Current keymode: %d
 ]]
 
 Automap.versionString = [[
-Automap v5.0.4
+Automap v5.0.5
 ]]
 
 Automap.load = function(self)
@@ -128,7 +139,7 @@ Automap.receive = function(self, event)
 	elseif event.name == "quit" then
 		os.exit()
 	elseif event.name == "filedropped" then
-		self:process(event.args[1]:getFilename())
+		self:process(event.args[1])
 	elseif event.name == "keypressed" then
 		local key = event.args[1]
 		if key == "left" then
@@ -146,11 +157,15 @@ Automap.receive = function(self, event)
 	end
 end
 
-Automap.process = function(self, basePath)
+Automap.process = function(self, file)
 	local debugDiffs = false
-	
+	local baseFilePath = file:getFilename()
+	local baseFileName = baseFilePath:match("^.+\\(.-)$")
+	local basePath = baseFilePath:match("^(.+)\\.-$")
+	setWriteDir(basePath)
+			
 	local nc = NoteChart:new()
-	nc:parse(basePath)
+	nc:parse(file)
 	
 	if not config[self.targetMode] or not config[self.targetMode][nc.columnCount] then
 		self.info.text = "unsupported mode\n" .. nc.columnCount .. " -> " .. self.targetMode .. "\n" ..
@@ -185,7 +200,7 @@ Automap.process = function(self, basePath)
 
 		nc.noteData = noteData
 		nc.version = "automap: base blocks"
-		nc:export(basePath .. ".bb.osu")
+		nc:export(baseFileName .. ".bb.osu")
 	end
 
 	NotePreprocessor:process(nbs)
@@ -209,13 +224,13 @@ Automap.process = function(self, basePath)
 		nc.noteData = noteData
 		nc.version = "automap: upscaled blocks"
 		nc.columnCount = self.targetMode
-		nc:export(basePath .. ".ub.osu")
+		nc:export(baseFileName .. ".ub.osu")
 	end
 
 	nc.noteData = notes
 	nc.version = "A" .. self.targetMode .. "K " .. nc.baseVersion
 	nc.columnCount = self.targetMode
-	nc:export(basePath .. ".a" .. self.targetMode .. ".osu")
+	nc:export(baseFileName .. ".a" .. self.targetMode .. ".osu")
 end
 
 return Automap

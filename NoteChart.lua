@@ -11,14 +11,15 @@ NoteChart.new = function(self)
 	return noteChart
 end
 
-NoteChart.parse = function(self, filePath)
-	self.filePath = filePath
-	local file, err = io.open(filePath, "r")
-	if err then print(err) end
+NoteChart.parse = function(self, file)
+	file:open("r")
+	self.baseFileLines = {}
+	
 	self.noteData = {}
 
 	self.currentBlockName = ""
 	for line in file:lines() do
+		self.baseFileLines[#self.baseFileLines + 1] = line
 		if line:find("^%[") then
 			self.currentBlockName = line:match("^%[(.+)%]")
 		else
@@ -63,10 +64,8 @@ NoteChart.parse = function(self, filePath)
 end
 
 NoteChart.export = function(self, filePath)
-	local file = io.open(self.filePath, "r")
-	
 	local output = {}
-	for line in file:lines() do
+	for _, line in ipairs(self.baseFileLines) do
 		if line:find("[HitObjects]", 1, true) then
 			table.insert(output, line)
 			break
@@ -78,7 +77,6 @@ NoteChart.export = function(self, filePath)
 			table.insert(output, line)
 		end
 	end
-	file:close()
 	
 	local addition = "0:0:0:0:"
 	for _, note in pairs(self.noteData) do
@@ -98,8 +96,13 @@ NoteChart.export = function(self, filePath)
 		end
 	end
 	
-	local file, err = io.open(filePath, "w")
-	if err then print(err) end
+	-- local file, err = io.open(filePath, "w")
+	-- if err then print(err) end
+	-- file:write(table.concat(output, "\n"))
+	-- file:close()
+	
+	local file = love.filesystem.newFile(filePath)
+	file:open("w")
 	file:write(table.concat(output, "\n"))
 	file:close()
 	
