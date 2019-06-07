@@ -52,7 +52,7 @@ Current keymode: %d
 ]]
 
 Automap.versionString = [[
-Automap v5.0.5
+Automap v5.0.6
 ]]
 
 Automap.load = function(self)
@@ -166,6 +166,11 @@ Automap.process = function(self, file)
 			
 	local nc = NoteChart:new()
 	nc:parse(file)
+	if nc.noteCount == 0 then
+		self.info.text = "empty beatmap\n"
+		self.info:reload()
+		return
+	end
 	
 	if not config[self.targetMode] or not config[self.targetMode][nc.columnCount] then
 		self.info.text = "unsupported mode\n" .. nc.columnCount .. " -> " .. self.targetMode .. "\n" ..
