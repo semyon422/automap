@@ -52,7 +52,7 @@ Current keymode: %d
 ]]
 
 Automap.versionString = [[
-Automap v5.0.6
+Automap v5.0.7
 ]]
 
 Automap.load = function(self)
@@ -170,6 +170,10 @@ Automap.process = function(self, file)
 		self.info.text = "empty beatmap\n"
 		self.info:reload()
 		return
+	elseif nc.mode ~= 3 then
+		self.info.text = "wrong mode\n"
+		self.info:reload()
+		return
 	end
 	
 	if not config[self.targetMode] or not config[self.targetMode][nc.columnCount] then
@@ -209,6 +213,7 @@ Automap.process = function(self, file)
 	end
 
 	NotePreprocessor:process(nbs)
+	NotePreprocessor:print("pgam.txt")
 	-- NotePreprocessor:print("blocks.txt")
 
 	local am = Upscaler:new()

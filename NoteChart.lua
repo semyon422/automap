@@ -29,6 +29,8 @@ NoteChart.parse = function(self, file)
 					self.columnCount = tonumber(value)
 				elseif key == "Version" then
 					self.baseVersion = value
+				elseif key == "Mode" then
+					self.mode = tonumber(value)
 				end
 			elseif self.currentBlockName == "Events" and line:find("^%d-,%d-,\".+\"") then
 				self.bgName = line:match("^.-,.-,\"(.+)\"")
