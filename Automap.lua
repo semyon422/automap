@@ -52,7 +52,7 @@ Current keymode: %d
 ]]
 
 Automap.versionString = [[
-Automap v5.0.7
+Automap v5.0.8
 ]]
 
 Automap.load = function(self)
