@@ -10,6 +10,7 @@ local Upscaler = require("libchart.Upscaler")
 local NoteBlock = require("libchart.NoteBlock")
 local BlockFinder = require("libchart.BlockFinder")
 local NotePreprocessor = require("libchart.NotePreprocessor")
+local SolutionSeeker = require("libchart.SolutionSeeker")
 
 local config = require("config")
 
@@ -49,6 +50,9 @@ or mouse wheel
 to change output keymode.
 Drop beatmap here to convert.
 Current keymode: %d
+
+Press F1 to switch
+between stable and beta version
 ]]
 
 Automap.versionString = [[
@@ -139,6 +143,9 @@ Automap.receive = function(self, event)
 	elseif event.name == "quit" then
 		os.exit()
 	elseif event.name == "filedropped" then
+		if self.extraMode then
+			return self:processExtra(event.args[1])
+		end
 		self:process(event.args[1])
 	elseif event.name == "keypressed" then
 		local key = event.args[1]
@@ -146,6 +153,14 @@ Automap.receive = function(self, event)
 			self.targetMode = self.targetMode - 1
 		elseif key == "right" then
 			self.targetMode = self.targetMode + 1
+		elseif key == "f1" then
+			self.extraMode = not self.extraMode
+			if self.extraMode then
+				self.version.text = [[Automap v6.0.0 beta]]
+			else
+				self.version.text = [[Automap v5.0.8]]
+			end
+			self.version:reload()
 		end
 		self.info.text = self.infoString:format(self.targetMode)
 		self.info:reload()
@@ -241,6 +256,108 @@ Automap.process = function(self, file)
 	nc.version = "A" .. self.targetMode .. "K " .. nc.baseVersion
 	nc.columnCount = self.targetMode
 	nc:export(baseFileName .. ".a" .. self.targetMode .. ".osu")
+end
+
+local intersectSegment = function(tc, tm, bc, bm)
+	return (
+		math.max((tc - 1) / tm, math.min(tc / tm, bc / bm)) -
+		math.min(tc / tm, math.max((tc - 1) / tm, (bc - 1) / bm))
+	) * tm
+end
+
+
+Automap.processExtra = function(self, file)
+	local debugDiffs = false
+	local baseFilePath = file:getFilename()
+	local baseFileName = baseFilePath:match("^.+\\(.-)$")
+	local basePath = baseFilePath:match("^(.+)\\.-$")
+	setWriteDir(basePath)
+			
+	local nc = NoteChart:new()
+	nc:parse(file)
+	if nc.noteCount == 0 then
+		self.info.text = "empty beatmap\n"
+		self.info:reload()
+		return
+	elseif nc.mode ~= 3 then
+		self.info.text = "wrong mode\n"
+		self.info:reload()
+		return
+	end
+	
+	NotePreprocessor.columnCount = nc.columnCount
+	NotePreprocessor:process(nc.noteData)
+	-- NotePreprocessor:print("np_notes.txt")
+
+	local bf = BlockFinder:new()
+	bf.noteData = nc.noteData
+	bf.columnCount = nc.columnCount
+	bf:process()
+
+	local notes = bf:getNoteBlocks()
+	print("blocks", #notes)
+
+	local getDelta = function(i, lane)
+		local startTime = notes[i].startTime
+		for k = i - 1, 1, -1 do
+			local cnote = notes[k]
+			if cnote.lane == lane then
+				return math.max(0, startTime - cnote.endTime)
+			end
+		end
+		return startTime
+	end
+
+	local recursionLimit = 1
+
+	local check
+	check = function(noteIndex, lane)
+		local rate = 1
+
+		local note = notes[noteIndex]
+
+		if not note then
+			return rate
+		end
+
+		rate = rate * intersectSegment(lane, self.targetMode, note.columnIndex, nc.columnCount)
+		if rate == 0 then return rate end
+
+		rate = rate * getDelta(noteIndex, lane) / 1000
+		if rate == 0 then return rate end
+
+		if recursionLimit ~= 0 then
+			recursionLimit = recursionLimit - 1
+			local maxNextRate = 0
+			for i = 1, self.targetMode do
+				maxNextRate = math.max(maxNextRate, check(noteIndex + 1, i))
+			end
+			rate = rate * maxNextRate
+			recursionLimit = recursionLimit + 1
+		end
+
+		return rate
+	end
+	
+	local status, err = SolutionSeeker:solve(notes, self.targetMode, check)
+
+	assert(status, err)
+	for _, note in ipairs(notes) do
+		assert(note.columnIndex, _)
+		note.columnIndex = note.lane
+	end
+
+	local notes2 = {}
+	for _, noteBlock in ipairs(notes) do
+		for _, note in ipairs(noteBlock:getNotes()) do
+			notes2[#notes2 + 1] = note
+		end
+	end
+
+	nc.noteData = notes2
+	nc.version = "6A" .. self.targetMode .. "K " .. nc.baseVersion
+	nc.columnCount = self.targetMode
+	nc:export(baseFileName .. ".6a" .. self.targetMode .. ".osu")
 end
 
 return Automap
